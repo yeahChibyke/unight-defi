@@ -8,19 +8,31 @@ import {IMidnight} from "./interfaces/IMidnight.sol";
 import {IUnightPolicyRegistry} from "./interfaces/IUnightPolicyRegistry.sol";
 import {UnightAccount} from "./UnightAccount.sol";
 
-/// @notice CREATE2 factory for one immutable account per LP position.
+/// @title Unight Account Factory
+/// @notice CREATE2 factory that deploys one immutable account for each LP position.
+/// @dev The factory shares canonical protocol addresses across accounts. Account
+///      initialization still validates the selected pool and dormancy oracle.
 contract UnightAccountFactory {
+    /// @notice Canonical Uniswap v4 PositionManager shared by new accounts.
     IPositionManager public immutable positionManager;
+    /// @notice Canonical Uniswap v4 PoolManager shared by new accounts.
     IPoolManager public immutable poolManager;
+    /// @notice Canonical Midnight protocol shared by new accounts.
     IMidnight public immutable midnight;
+    /// @notice Governance registry shared by new accounts.
     IUnightPolicyRegistry public immutable registry;
 
+    /// @notice Account deployed for an LP and position, if one exists.
     mapping(address owner => mapping(uint256 positionId => address account)) public accountOf;
 
     error AccountExists();
 
     event AccountCreated(address indexed owner, uint256 indexed positionId, address indexed account);
 
+    /// @param positionManager_ Canonical Uniswap v4 PositionManager.
+    /// @param poolManager_ Canonical Uniswap v4 PoolManager.
+    /// @param midnight_ Canonical Midnight lending protocol.
+    /// @param registry_ Registry used by every created account.
     constructor(
         IPositionManager positionManager_,
         IPoolManager poolManager_,
@@ -38,6 +50,16 @@ contract UnightAccountFactory {
         registry = registry_;
     }
 
+    /// @notice Deploys a deterministic account for one LP position.
+    /// @dev Anyone may submit the deployment, but the supplied owner becomes the
+    ///      immutable account owner. The same owner-position pair cannot repeat.
+    /// @param owner_ LP that will own the new account.
+    /// @param positionId Uniswap v4 position NFT assigned to the account.
+    /// @param loanToken Token used to fund Midnight settlements.
+    /// @param expectedPoolId Pool identity accepted by the account.
+    /// @param dormancyOracle Historical terminality oracle.
+    /// @param bidRatifier Ratifier allowed to register maker-bid contexts.
+    /// @return account Address of the newly deployed account.
     function createAccount(
         address owner_,
         uint256 positionId,
@@ -66,6 +88,16 @@ contract UnightAccountFactory {
         emit AccountCreated(owner_, positionId, account);
     }
 
+    /// @notice Computes the CREATE2 address for a prospective account.
+    /// @dev The result is valid only while the factory configuration and all
+    ///      constructor arguments remain unchanged.
+    /// @param owner_ LP that will own the prospective account.
+    /// @param positionId Uniswap v4 position NFT assigned to the account.
+    /// @param loanToken Token used to fund Midnight settlements.
+    /// @param expectedPoolId Pool identity accepted by the account.
+    /// @param dormancyOracle Historical terminality oracle.
+    /// @param bidRatifier Ratifier allowed to register maker-bid contexts.
+    /// @return predicted CREATE2 account address.
     function predictAccount(
         address owner_,
         uint256 positionId,

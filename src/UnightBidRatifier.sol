@@ -5,8 +5,9 @@ import {IMidnight} from "./interfaces/IMidnight.sol";
 import {IMidnightRatifier} from "./interfaces/IMidnightRatifier.sol";
 import {IUnightAccount} from "./interfaces/IUnightAccount.sol";
 
-/// @notice Adapter that composes Midnight's normal signature/authorization
-///         ratifier with Unight's dynamic LP-account checks.
+/// @title Unight Bid Ratifier
+/// @notice Adapter that composes Midnight's base authorization ratifier with
+///         Unight's dynamic LP-account checks.
 /// @dev The base ratifier remains responsible for maker authorization. This
 ///      adapter additionally registers the exact offer before Midnight invokes
 ///      the account callback, giving the callback an unforgeable offer context.
@@ -21,6 +22,9 @@ contract UnightBidRatifier is IMidnightRatifier {
     error BaseRatificationFailed();
     error OfferRejected();
 
+    /// @param midnight_ Canonical Midnight protocol that is allowed to call this ratifier.
+    /// @param baseRatifier_ Existing ratifier responsible for maker authorization.
+    /// @param account_ Unight account whose maker offer this ratifier protects.
     constructor(IMidnight midnight_, IMidnightRatifier baseRatifier_, IUnightAccount account_) {
         require(
             address(midnight_) != address(0) && address(baseRatifier_) != address(0) && address(account_) != address(0),
@@ -31,6 +35,13 @@ contract UnightBidRatifier is IMidnightRatifier {
         account = account_;
     }
 
+    /// @notice Validates a maker bid and registers its exact callback context.
+    /// @dev The call must originate from Midnight. The base ratifier runs first;
+    ///      only then is the offer bound to the account before callback execution.
+    /// @param offer Midnight offer being ratified.
+    /// @param ratifierData Authorization data forwarded to the base ratifier.
+    /// @param taker Address taking the maker offer.
+    /// @return success Midnight's callback-success sentinel.
     function isRatified(IMidnight.Offer memory offer, bytes memory ratifierData, address taker)
         external
         returns (bytes32)

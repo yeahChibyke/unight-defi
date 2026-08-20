@@ -15,12 +15,18 @@ import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionMa
 import {IDormancyOracle} from "../interfaces/IDormancyOracle.sol";
 import {V4LiquidityMath} from "./V4LiquidityMath.sol";
 
+/// @title Uniswap v4 Terminal Position Adapter
+/// @notice Restricts a v4 position unwind to the loan token when the position
+///         is demonstrably terminal and historically dormant.
+/// @dev This is an internal library, so PositionManager calls execute with the
+///      UnightAccount as the caller and the account remains the NFT owner.
 library V4TerminalPositionAdapter {
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
     using PositionInfoLibrary for PositionInfo;
     using StateLibrary for IPoolManager;
 
+    /// @notice Live position and terminal-principal observation.
     struct Snapshot {
         PoolKey key;
         int24 tickLower;
@@ -31,6 +37,7 @@ library V4TerminalPositionAdapter {
         uint256 terminalPrincipal;
     }
 
+    /// @notice Immutable dependencies and policy parameters used by the adapter.
     struct Config {
         IPositionManager positionManager;
         IPoolManager poolManager;
@@ -51,6 +58,9 @@ library V4TerminalPositionAdapter {
     error InvalidTicks();
     error InvalidOutput();
 
+    /// @notice Reads and validates the current terminal state of the position.
+    /// @param config PositionManager, pool, oracle, identity, and safety parameters.
+    /// @return result Position metadata and the principal available on the terminal side.
     function snapshot(Config memory config) internal view returns (Snapshot memory result) {
         if (IERC721(address(config.positionManager)).ownerOf(config.positionId) == address(0)) {
             revert PositionNotOwned();
@@ -98,6 +108,13 @@ library V4TerminalPositionAdapter {
             : V4LiquidityMath.amount1ForLiquidity(sqrtLower, sqrtUpper, result.liquidity);
     }
 
+    /// @notice Removes enough terminal liquidity to fund a Midnight settlement.
+    /// @dev Executes only `DECREASE_LIQUIDITY` followed by `TAKE_PAIR`; no swap,
+    ///      arbitrary hook data, or arbitrary recipient is accepted.
+    /// @param config PositionManager, pool, oracle, identity, and safety parameters.
+    /// @param requiredAmount Minimum loan-token amount needed by Midnight.
+    /// @param deadline PositionManager deadline for the liquidity mutation.
+    /// @return principalRemoved Principal represented by the liquidity removed.
     function removeForFunding(Config memory config, uint256 requiredAmount, uint256 deadline)
         internal
         returns (uint256 principalRemoved)
