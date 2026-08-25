@@ -79,6 +79,12 @@ interface IMidnight {
     /// @notice Changes an authorization on behalf of `onBehalf`.
     function setIsAuthorized(address authorized, bool newIsAuthorized, address onBehalf) external;
 
+    /// @notice Supplies collateral to a market on behalf of an account.
+    function supplyCollateral(Market memory market, uint256 collateralIndex, uint256 assets, address onBehalf) external;
+
+    /// @notice Returns the market tick spacing used to validate offer ticks.
+    function tickSpacing(bytes32 id) external view returns (uint256);
+
     /// @notice Returns a user's credit balance in a market.
     function credit(bytes32 id, address user) external view returns (uint256);
 
