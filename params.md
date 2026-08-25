@@ -59,7 +59,7 @@ to `latest` for stable fork tests.
 | Pool ID | `0xca7a9a04f4fbb8e4bbacd89b2597ddabdd8dfb4a6c3e6b7793ac8f75a2e5d89b` |
 | currency0 | USDC (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`) |
 | currency1 | cbBTC (`0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf`) |
-| Fee | `0` |
+| Fee | `8_388_608` (`0x800000`, dynamic-fee flag) |
 | Tick spacing | `10` |
 | Hooks | `0xfaD27BC5ef16A0a2aA3049953C25a48E8858b0C0` |
 | Initialize block | `48_011_591` |
@@ -144,4 +144,3 @@ deployment exists in this repository.
 - [Morpho Midnight API](https://docs.morpho.org/developers/api/morpho-midnight/)
 - [Circle USDC contract addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)
 - [Coinbase cbBTC](https://www.coinbase.com/cbbtc)
-
