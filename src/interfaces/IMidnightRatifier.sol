@@ -11,5 +11,6 @@ interface IMidnightRatifier {
     /// @param taker Address attempting to take the offer.
     function isRatified(IMidnight.Offer memory offer, bytes memory ratifierData, address taker)
         external
+        view
         returns (bytes32);
 }

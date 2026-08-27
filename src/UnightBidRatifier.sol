@@ -8,9 +8,9 @@ import {IUnightAccount} from "./interfaces/IUnightAccount.sol";
 /// @title Unight Bid Ratifier
 /// @notice Adapter that composes Midnight's base authorization ratifier with
 ///         Unight's dynamic LP-account checks.
-/// @dev The base ratifier remains responsible for maker authorization. This
-///      adapter additionally registers the exact offer before Midnight invokes
-///      the account callback, giving the callback an unforgeable offer context.
+/// @dev Midnight evaluates ratifiers with a static call. The account therefore
+///      opens its maker-bid context at the callback boundary; this adapter is
+///      intentionally read-only.
 contract UnightBidRatifier is IMidnightRatifier {
     bytes32 private constant CALLBACK_SUCCESS = keccak256("morpho.midnight.callbackSuccess");
 
@@ -35,15 +35,15 @@ contract UnightBidRatifier is IMidnightRatifier {
         account = account_;
     }
 
-    /// @notice Validates a maker bid and registers its exact callback context.
-    /// @dev The call must originate from Midnight. The base ratifier runs first;
-    ///      only then is the offer bound to the account before callback execution.
+    /// @notice Validates a maker bid for the configured account.
+    /// @dev The call must originate from Midnight and must remain read-only.
     /// @param offer Midnight offer being ratified.
     /// @param ratifierData Authorization data forwarded to the base ratifier.
     /// @param taker Address taking the maker offer.
     /// @return success Midnight's callback-success sentinel.
     function isRatified(IMidnight.Offer memory offer, bytes memory ratifierData, address taker)
         external
+        view
         returns (bytes32)
     {
         if (msg.sender != address(midnight)) revert NotMidnight();
@@ -55,9 +55,6 @@ contract UnightBidRatifier is IMidnightRatifier {
                 || offer.ratifier != address(this) || offer.maxAssets == 0 || offer.expiry > offer.market.maturity
         ) revert OfferRejected();
 
-        account.registerBidContext(
-            keccak256(abi.encode(offer)), offer.market, taker, offer.maxAssets, offer.expiry, offer.callbackData
-        );
         return CALLBACK_SUCCESS;
     }
 }

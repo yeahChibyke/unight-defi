@@ -439,7 +439,24 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
     ) external override returns (bytes32) {
         if (msg.sender != address(midnight)) revert CallbackRejected();
         ExecutionContext memory context = _execution;
-        if (context.state == ExecutionState.Idle) revert CallbackRejected();
+        if (context.state == ExecutionState.Idle) {
+            if (data.length != 160) revert CallbackRejected();
+            (
+                uint256 callbackPolicyNonce,
+                uint256 callbackPositionEpoch,
+                uint256 minUnits,
+                uint256 maxAssets,
+                uint256 deadline
+            ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256));
+            if (
+                !policy.enabled || closed || block.timestamp > policy.expiry || id != policy.marketId || maxAssets == 0
+                    || maxAssets > remainingBidCapacity() || midnight.debt(id, owner) != 0
+                    || callbackPolicyNonce != policyNonce || callbackPositionEpoch != positionEpoch || minUnits == 0
+                    || deadline < block.timestamp || deadline > policy.expiry
+            ) revert CallbackRejected();
+            _openBidContext(id, market, buyer, data, maxAssets, minUnits, deadline);
+            context = _execution;
+        }
         if (
             id != context.marketId || buyer != context.expectedBuyer || MarketId.hash(market) != context.marketHash
                 || keccak256(data) != context.callbackDataHash || context.policyNonce != policyNonce
@@ -471,6 +488,35 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
         _approveExact(buyerAssets);
         delete _execution;
         return CALLBACK_SUCCESS;
+    }
+
+    /// @dev Opens a maker-bid context from callback commitments after Midnight
+    /// has authenticated the offer through its static ratifier call.
+    function _openBidContext(
+        bytes32 id,
+        IMidnight.Market memory market,
+        address buyer,
+        bytes memory data,
+        uint256 maxAssets,
+        uint256 minUnits,
+        uint256 deadline
+    ) internal {
+        _execution = ExecutionContext({
+            state: ExecutionState.MakerBid,
+            offerHash: keccak256(abi.encode(id, market, buyer, data)),
+            marketHash: MarketId.hash(market),
+            marketId: id,
+            expectedBuyer: owner,
+            expectedTaker: address(0),
+            maxBuyerAssets: maxAssets,
+            minUnits: minUnits,
+            preCredit: midnight.credit(id, owner),
+            preDebt: midnight.debt(id, owner),
+            policyNonce: policyNonce,
+            positionEpoch: positionEpoch,
+            deadline: deadline,
+            callbackDataHash: keccak256(data)
+        });
     }
 
     /// @notice Sweeps residual loan tokens after the account has fully settled and closed.

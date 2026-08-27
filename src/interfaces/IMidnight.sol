@@ -82,8 +82,41 @@ interface IMidnight {
     /// @notice Supplies collateral to a market on behalf of an account.
     function supplyCollateral(Market memory market, uint256 collateralIndex, uint256 assets, address onBehalf) external;
 
+    /// @notice Withdraws collateral from a borrower's Midnight position.
+    function withdrawCollateral(
+        Market memory market,
+        uint256 collateralIndex,
+        uint256 assets,
+        address onBehalf,
+        address receiver
+    ) external;
+
     /// @notice Returns the market tick spacing used to validate offer ticks.
     function tickSpacing(bytes32 id) external view returns (uint256);
+
+    /// @notice Returns the amount consumed for a maker's offer group.
+    function consumed(address maker, bytes32 group) external view returns (uint256);
+
+    /// @notice Marks an offer group as consumed on behalf of its maker.
+    function setConsumed(bytes32 group, uint128 amount, address onBehalf) external;
+
+    /// @notice Returns the lender's pending continuous fee.
+    function pendingFee(bytes32 id, address user) external view returns (uint256);
+
+    /// @notice Returns whether a borrower is solvent at current oracle prices.
+    function isHealthy(Market memory market, bytes32 id, address borrower) external view returns (bool);
+
+    /// @notice Returns the fee-setter role used by fork fee scenarios.
+    function feeSetter() external view returns (address);
+
+    /// @notice Changes one live market settlement-fee breakpoint.
+    function setMarketSettlementFee(bytes32 id, uint256 index, uint256 newSettlementFee) external;
+
+    /// @notice Changes the live market continuous fee.
+    function setMarketContinuousFee(bytes32 id, uint256 newContinuousFee) external;
+
+    /// @notice Returns settlement fees accumulated for a loan token.
+    function claimableSettlementFee(address token) external view returns (uint256);
 
     /// @notice Returns a user's credit balance in a market.
     function credit(bytes32 id, address user) external view returns (uint256);
