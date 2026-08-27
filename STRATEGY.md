@@ -37,6 +37,24 @@ V1 is deliberately narrow:
 
 The first deployment should support one approved pool, one Midnight market, and small caps.
 
+## 2.1 Current implementation status
+
+The account, factory, policy registry, terminal-position adapter, ratifier
+integration, and both settlement paths are implemented. The pinned Base fork
+suite currently passes 55 tests, including successful Auto-Lend and LP Bid
+Board settlement plus partial-fill, group, fee, rollback, health, maturity,
+custody, and policy cases.
+
+Foundry also runs fork-backed fuzz tests for policy boundaries and callback
+rollback. Medusa and Echidna run a separate deterministic harness for
+accounting, cap, callback-commitment, epoch, and liquidity-math properties.
+Because those standalone fuzzers do not reproduce Foundry fork cheatcodes,
+their results are not evidence of live Midnight settlement. The remaining
+contract-side milestone is deployment-grade validation: finalize production
+deployment addresses and ratifier wiring, replace fork-local test controls
+with reviewed production dependencies, and perform independent security and
+operational review.
+
 ## 3. Product and Risk Model
 
 The product transforms part of an LP’s dormant AMM inventory into fixed-maturity credit exposure.
@@ -561,7 +579,7 @@ Only after onchain policy enforcement is working should the monitor, simulator, 
 
 ### Phase 7 — Fuzzing and adversarial testing
 
-Use Foundry fuzzing and invariant testing for:
+Use Foundry fork fuzzing and invariant testing for:
 
 - capacity saturation;
 - concurrent fills;
@@ -575,6 +593,10 @@ Use Foundry fuzzing and invariant testing for:
 - group consumption;
 - account migration;
 - maturity and bad debt.
+
+Use Medusa and Echidna for deterministic, tool-compatible properties that do
+not require Foundry cheatcodes or live protocol state. Keep their reports
+separate from the live-fork settlement evidence.
 
 ### Phase 8 — Independent security review
 
