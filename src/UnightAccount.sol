@@ -19,9 +19,10 @@ import {V4TerminalPositionAdapter} from "./libraries/V4TerminalPositionAdapter.s
 /// @title Unight LP Account
 /// @notice Non-upgradeable account that couples one LP's Uniswap v4 position to
 ///         one controlled Midnight lending policy.
-/// @dev The account owns exactly one v4 position NFT. It removes liquidity only
-///      after the position adapter proves terminality and dormancy, and it
-///      accepts Midnight callbacks only for a context created in the same flow.
+/// @dev The account is bound to exactly one v4 position NFT and accepts only
+///      that token from the PositionManager. It removes liquidity only after
+///      the position adapter proves terminality and dormancy, and it accepts
+///      Midnight callbacks only for a context created in the same flow.
 contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount {
     uint256 private constant BPS = 10_000;
     uint256 private constant WAD = 1e18;
@@ -90,6 +91,11 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
     uint256 public bidBoardBuyerAssets;
     /// @notice Principal notionally removed from the v4 position.
     uint256 public v4PrincipalRemoved;
+    /// @notice Market in which the account has created a live Midnight position.
+    /// @dev Recording the first market used prevents a later {setPolicy} from
+    ///      switching markets and hiding the settlement market from the exit
+    ///      checks in {withdrawPosition} and {sweepLoanToken}.
+    bytes32 public activeSettlementMarket;
     /// @notice Whether the account has been permanently closed.
     bool public closed;
 
@@ -207,8 +213,9 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
     }
 
     /// @notice Installs a validated lending, fee, capacity, and dormancy policy.
-    /// @dev The market, loan token, chain, maturity, registry approvals, and
-    ///      bid-ratifier requirement are checked before the policy is stored.
+    /// @dev The market, loan token, chain, maturity, registry approvals,
+    ///      bid-ratifier requirement, and active-settlement-market conflict are
+    ///      checked before the policy is stored.
     /// @param newPolicy Policy to apply to future executions.
     function setPolicy(UnightPolicy calldata newPolicy) external onlyOwner idle {
         if (!newPolicy.enabled || newPolicy.marketId == bytes32(0)) revert InvalidPolicy();
@@ -224,6 +231,12 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
         }
         if (newPolicy.bidBoardCap > 0 && bidRatifier == address(0)) revert InvalidPolicy();
         if (!registry.isMarketApproved(newPolicy.marketId)) revert MarketNotApproved();
+
+        if (
+            activeSettlementMarket != bytes32(0) && activeSettlementMarket != newPolicy.marketId
+                && (midnight.credit(activeSettlementMarket, owner) != 0
+                    || midnight.debt(activeSettlementMarket, owner) != 0)
+        ) revert PositionStillActive();
 
         IMidnight.Market memory market = midnight.toMarket(newPolicy.marketId);
         if (
@@ -264,11 +277,13 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
     }
 
     /// @notice Returns the controlled v4 position NFT to the LP after settlement.
-    /// @dev The account must be closed and the LP's selected-market credit and
-    ///      debt must both be zero.
+    /// @dev The account must be closed, and the LP's credit and debt in the
+    ///      settlement market must both be zero. The settlement market is the
+    ///      first market used, or the policy market if none was recorded.
     function withdrawPosition() external onlyOwner idle {
         if (!closed) revert InvalidPolicy();
-        if (midnight.credit(policy.marketId, owner) != 0 || midnight.debt(policy.marketId, owner) != 0) {
+        bytes32 settlementMarket = activeSettlementMarket == bytes32(0) ? policy.marketId : activeSettlementMarket;
+        if (midnight.credit(settlementMarket, owner) != 0 || midnight.debt(settlementMarket, owner) != 0) {
             revert PositionStillActive();
         }
         unchecked {
@@ -280,28 +295,39 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
 
     /// @notice Returns remaining auto-lend capacity under live position and policy limits.
     /// @dev Capacity is bounded by terminal principal after reserve, lendable BPS,
-    ///      global cap, and the auto-lend cap. Committed capacity is monotonic in v1.
+    ///      global cap, and the auto-lend cap. Committed buyer assets are
+    ///      cumulative and never decrease.
     function remainingCapacity() public view returns (uint256) {
         if (!policy.enabled || closed) return 0;
-        uint256 terminalPrincipal = V4TerminalPositionAdapter.snapshot(_adapterConfig()).terminalPrincipal;
-
-        uint256 reserveAdjusted =
-            terminalPrincipal > policy.reactivationReserve ? terminalPrincipal - policy.reactivationReserve : 0;
-        uint256 lendable = FullMath.mulDiv(terminalPrincipal, policy.maxLendableBps, BPS);
-        uint256 liveCapacity = reserveAdjusted < lendable ? reserveAdjusted : lendable;
-        uint256 committedRemaining = liveCapacity > committedBuyerAssets ? liveCapacity - committedBuyerAssets : 0;
+        uint256 committedRemaining = _remainingLiveCommitted();
         uint256 globalRemaining = policy.globalCap > committedBuyerAssets ? policy.globalCap - committedBuyerAssets : 0;
         uint256 modeRemaining = policy.autoLendCap > autoLendBuyerAssets ? policy.autoLendCap - autoLendBuyerAssets : 0;
         uint256 result = committedRemaining < globalRemaining ? committedRemaining : globalRemaining;
         return result < modeRemaining ? result : modeRemaining;
     }
 
-    /// @notice Returns remaining maker-bid capacity under global and bid caps.
+    /// @notice Returns remaining maker-bid capacity under live, global, and bid limits.
+    /// @dev Capacity is bounded by the same live terminal-principal, reserve, and
+    ///      lendable share as auto-lend so the bid board cannot lend liquidity the
+    ///      policy withholds, then by the global cap and the bid cap.
     function remainingBidCapacity() public view returns (uint256) {
         if (!policy.enabled || closed) return 0;
+        uint256 committedRemaining = _remainingLiveCommitted();
         uint256 globalRemaining = policy.globalCap > committedBuyerAssets ? policy.globalCap - committedBuyerAssets : 0;
         uint256 modeRemaining = policy.bidBoardCap > bidBoardBuyerAssets ? policy.bidBoardCap - bidBoardBuyerAssets : 0;
-        return globalRemaining < modeRemaining ? globalRemaining : modeRemaining;
+        uint256 result = committedRemaining < globalRemaining ? committedRemaining : globalRemaining;
+        return result < modeRemaining ? result : modeRemaining;
+    }
+
+    /// @dev Live capacity after the reactivation reserve and max-lendable share,
+    ///      net of already-committed buyer assets.
+    function _remainingLiveCommitted() internal view returns (uint256) {
+        uint256 terminalPrincipal = V4TerminalPositionAdapter.snapshot(_adapterConfig()).terminalPrincipal;
+        uint256 reserveAdjusted =
+            terminalPrincipal > policy.reactivationReserve ? terminalPrincipal - policy.reactivationReserve : 0;
+        uint256 lendable = FullMath.mulDiv(terminalPrincipal, policy.maxLendableBps, BPS);
+        uint256 liveCapacity = reserveAdjusted < lendable ? reserveAdjusted : lendable;
+        return liveCapacity > committedBuyerAssets ? liveCapacity - committedBuyerAssets : 0;
     }
 
     /// @notice Takes a borrower sell offer using the LP as Midnight taker.
@@ -396,7 +422,7 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
             abi.decode(callbackData, (uint256, uint256, uint256));
         if (
             callbackPolicyNonce != policyNonce || callbackPositionEpoch != positionEpoch || minUnits == 0
-                || deadline < block.timestamp
+                || deadline < block.timestamp || deadline > policy.expiry
         ) revert CallbackRejected();
 
         _execution = ExecutionContext({
@@ -438,6 +464,7 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
         bytes memory data
     ) external override returns (bytes32) {
         if (msg.sender != address(midnight)) revert CallbackRejected();
+        if (!policy.enabled || closed || block.timestamp > policy.expiry) revert CallbackRejected();
         ExecutionContext memory context = _execution;
         if (context.state == ExecutionState.Idle) {
             if (data.length != 160) revert CallbackRejected();
@@ -450,9 +477,9 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
             ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256));
             if (
                 !policy.enabled || closed || block.timestamp > policy.expiry || id != policy.marketId || maxAssets == 0
-                    || maxAssets > remainingBidCapacity() || midnight.debt(id, owner) != 0
-                    || callbackPolicyNonce != policyNonce || callbackPositionEpoch != positionEpoch || minUnits == 0
-                    || deadline < block.timestamp || deadline > policy.expiry
+                    || midnight.debt(id, owner) != 0 || callbackPolicyNonce != policyNonce
+                    || callbackPositionEpoch != positionEpoch || minUnits == 0 || deadline < block.timestamp
+                    || deadline > policy.expiry
             ) revert CallbackRejected();
             _openBidContext(id, market, buyer, data, maxAssets, minUnits, deadline);
             context = _execution;
@@ -472,9 +499,15 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
         if (!_meetsMinimumRate(buyerAssets, units, pendingFeeIncrease, market.maturity)) {
             revert CallbackRejected();
         }
+        if (context.state == ExecutionState.AutoLend) {
+            if (buyerAssets > remainingCapacity()) revert CapacityExceeded();
+        } else {
+            if (buyerAssets > remainingBidCapacity()) revert CapacityExceeded();
+        }
 
         uint256 principalRemoved = _removeForFunding(buyerAssets, context.deadline);
 
+        if (activeSettlementMarket == bytes32(0)) activeSettlementMarket = context.marketId;
         committedBuyerAssets += buyerAssets;
         v4PrincipalRemoved += principalRemoved;
         if (context.state == ExecutionState.AutoLend) {
@@ -521,11 +554,13 @@ contract UnightAccount is IERC721Receiver, IMidnightBuyCallback, IUnightAccount 
 
     /// @notice Sweeps residual loan tokens after the account has fully settled and closed.
     /// @dev This is for surplus balances, including fees returned with a v4 unwind;
-    ///      it cannot run while the selected Midnight position remains active.
+    ///      it cannot run while the LP's settlement-market position remains active.
     /// @param amount Amount to transfer.
     /// @param recipient Destination for the residual tokens.
     function sweepLoanToken(uint256 amount, address recipient) external onlyOwner idle {
-        if (!closed || midnight.credit(policy.marketId, owner) != 0 || midnight.debt(policy.marketId, owner) != 0) {
+        if (!closed) revert PositionStillActive();
+        bytes32 settlementMarket = activeSettlementMarket == bytes32(0) ? policy.marketId : activeSettlementMarket;
+        if (midnight.credit(settlementMarket, owner) != 0 || midnight.debt(settlementMarket, owner) != 0) {
             revert PositionStillActive();
         }
         if (recipient == address(0) || !IERC20(loanToken).transfer(recipient, amount)) revert TransferFailed();

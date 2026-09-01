@@ -66,6 +66,11 @@ contract BaseForkFuzzTest is BaseForkHarness {
 
     /// @notice Fuzzes malformed callback commitments and verifies rollback.
     function testFuzzMalformedCallbackRollsBack(bytes32 suppliedData) public {
+        UnightPolicy memory policy = defaultPolicy();
+        policy.reactivationReserve = 0;
+        policy.expiry = block.timestamp + 2 days;
+        vm.prank(LP_OWNER);
+        account.setPolicy(policy);
         uint256 committed = account.committedBuyerAssets();
         uint256 removed = account.v4PrincipalRemoved();
 

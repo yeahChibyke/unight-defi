@@ -1,109 +1,112 @@
-# Unight Entry Points
+# Entry Point Map
+
+> Unight | 16 entry points | 1 permissionless | 3 role-gated | 12 admin/configuration
+
+---
 
 ## Protocol Flow Paths
 
-### Account setup (LP owner)
+### Deployment
 
-`PolicyRegistry.setPoolApproval()` → `PolicyRegistry.setMarketApproval()` → `PolicyRegistry.setDormancyOracleApproval()` → `AccountFactory.createAccount()` → `Account.setPolicy()`
+`UnightPolicyRegistry.constructor()` -> `setPoolApproval()` / `setMarketApproval()` / `setRatifierApproval()` / `setDormancyOracleApproval()`
 
-### Position custody (LP owner)
+`UnightAccountFactory.constructor()` -> `createAccount()` -> `UnightAccount.constructor()` <-- pool and oracle must already be approved
 
-`PositionManager.safeTransferFrom()` → `Account.onERC721Received()` ◄── configured PositionManager and position ID must match
+### Owner Setup
 
-### Auto-Lend (LP owner or approved executor)
+`[deployment above]` -> `UnightAccount.setPolicy()` <-- market approved, policy live before maturity
 
-`Account.setExecutor()` → `Account.takeAutoLend()` ◄── policy, market, authorization, debt, capacity, terminality, and dormancy checks → `Midnight.take()` → `Account.onBuy()` → `V4TerminalPositionAdapter.removeForFunding()` → `PositionManager.modifyLiquidities()`
+`[owner setup above]` -> `UnightAccount.setExecutor()` -> `takeAutoLend()`
 
-### LP Bid Board (Midnight/taker path)
+### Auto-Lend
 
-`Account.setPolicy()` → ratifier validates offer → `Midnight.take()` → `Account.onBuy()` → `_openBidContext()` → `V4TerminalPositionAdapter.removeForFunding()` → `PositionManager.modifyLiquidities()`
+`[owner setup above]` -> `Midnight.setIsAuthorized()` <-- external authorization by owner
 
-### Account exit (LP owner)
+`[executor setup above]` -> `takeAutoLend()` -> `Midnight.take()` -> `UnightAccount.onBuy()` -> `V4TerminalPositionAdapter.removeForFunding()` -> `IPositionManager.modifyLiquidities()`
 
-`Account.close()` → Midnight authorization revocation → `Account.withdrawPosition()` ◄── selected-market credit and debt must be zero → `PositionManager.safeTransferFrom()`
+### Maker Bid
+
+`[owner setup above]` -> LP maker offer with `UnightBidRatifier` and account callback
+
+`Borrower takes offer` -> `UnightBidRatifier.isRatified()` -> `UnightAccount.registerBidContext()` or `UnightAccount.onBuy()` idle-path context open -> `V4TerminalPositionAdapter.removeForFunding()`
+
+### Closure
+
+`[settlement flows above]` -> `close()` -> `withdrawPosition()` <-- selected Midnight credit and debt must be zero
+
+`[closure above]` -> `sweepLoanToken()` <-- selected Midnight credit and debt must be zero
 
 ## Permissionless
 
 ### `UnightAccountFactory.createAccount()`
 
 | Aspect | Detail |
-|---|---|
+|--------|--------|
 | Visibility | external |
-| Caller | Anyone; supplied owner becomes immutable account owner |
-| Parameters | owner, positionId, loanToken, poolId, oracle, ratifier (user-controlled) |
-| Call chain | `→ new UnightAccount()` |
-| State modified | `accountOf[owner][positionId]` |
+| Caller | Anyone deploying for an LP/position pair |
+| Parameters | `owner_` (user-controlled), `positionId` (user-controlled), `loanToken` (user-controlled), `expectedPoolId` (user-controlled), `dormancyOracle` (user-controlled), `bidRatifier` (user-controlled) |
+| Call chain | `UnightAccountFactory.createAccount()` -> `UnightAccount.constructor()` -> `UnightPolicyRegistry.isPoolApproved()` / `isDormancyOracleApproved()` |
+| State modified | `accountOf[owner_][positionId]` |
 | Value flow | None |
 | Reentrancy guard | no |
 
-### `UnightAccount.onBuy()`
-
-| Aspect | Detail |
-|---|---|
-| Visibility | external |
-| Caller | Midnight only; body checks `msg.sender` |
-| Parameters | market, assets, units, fee, buyer, callback data (protocol-derived) |
-| Call chain | `→ V4TerminalPositionAdapter.removeForFunding()` → `PositionManager.modifyLiquidities()` → exact USDC approval |
-| State modified | execution context, committed assets, mode assets, removed principal |
-| Value flow | v4 terminal liquidity → account → Midnight pull |
-| Reentrancy guard | no explicit modifier; context and caller checks |
-
 ## Role-Gated
 
-### LP owner
+### `owner or enabled executor`
 
-| Contract | Function | Parameters | State modified |
-|---|---|---|---|
-| UnightAccount | `setExecutor()` | executor, enabled (user-controlled) | executor mapping |
-| UnightAccount | `setPolicy()` | policy (user-controlled) | policy, policyNonce |
-| UnightAccount | `disablePolicy()` | none | policy.enabled, policyNonce |
-| UnightAccount | `close()` | none | closed, policy, epochs, Midnight authorization |
-| UnightAccount | `withdrawPosition()` | none | positionEpoch; NFT ownership |
-| UnightAccount | `sweepLoanToken()` | amount, recipient (user-controlled) | token balance outside contract |
+#### `UnightAccount.takeAutoLend()`
 
-### LP owner or approved executor
+| Aspect | Detail |
+|--------|--------|
+| Visibility | external, `onlyExecutor idle` |
+| Caller | LP owner or enabled keeper |
+| Parameters | `offer` (user-signed), `ratifierData` (user-signed), `units` (keeper-provided), `maxBuyerAssets` (keeper-provided), `minUnits` (keeper-provided), `deadline` (keeper-provided) |
+| Call chain | `takeAutoLend()` -> `Midnight.take()` -> `onBuy()` -> `V4TerminalPositionAdapter.removeForFunding()` -> `IPositionManager.modifyLiquidities()` -> `IERC20.approve()` |
+| State modified | `_execution`, then `committedBuyerAssets`, `autoLendBuyerAssets`, `v4PrincipalRemoved`, `_execution` deleted |
+| Value flow | loan token from v4 position to account, then exact allowance to Midnight |
+| Reentrancy guard | no; `idle` gates context setup and callback reuse |
 
-| Contract | Function | Parameters | State modified |
-|---|---|---|---|
-| UnightAccount | `takeAutoLend()` | offer, ratifierData, units, max assets, min units, deadline (caller-controlled) | execution context; settlement accounting; v4 position |
-
-### Configured bid ratifier
+### `configured bidRatifier`
 
 #### `UnightAccount.registerBidContext()`
 
 | Aspect | Detail |
-|---|---|
-| Visibility | external, `idle` |
+|--------|--------|
+| Visibility | external, `idle`, internal caller check |
 | Caller | configured `bidRatifier` only |
-| Parameters | offer hash, market, taker, max assets, deadline, callback data (ratifier/protocol-derived) |
-| Call chain | `→ Midnight.credit/debt` reads; opens maker-bid execution context |
+| Parameters | `offerHash` (protocol-derived), `market` (protocol-derived), `taker` (protocol-derived), `maxAssets` (protocol-derived), `deadline` (protocol-derived), `callbackData` (user-signed/protocol-derived) |
+| Call chain | `UnightBidRatifier.isRatified()` -> `UnightAccount.registerBidContext()` |
 | State modified | `_execution` |
 | Value flow | None |
-| Reentrancy guard | no explicit modifier; `idle` context guard |
+| Reentrancy guard | no; `idle` requires no active context |
 
-### Registry owner
+### `Midnight`
 
-| Contract | Function | Parameters | State modified |
-|---|---|---|---|
-| UnightPolicyRegistry | `setPoolApproval()` | pool ID, approved | pool allowlist |
-| UnightPolicyRegistry | `setMarketApproval()` | market ID, approved | market allowlist |
-| UnightPolicyRegistry | `setRatifierApproval()` | ratifier, approved | ratifier allowlist |
-| UnightPolicyRegistry | `setDormancyOracleApproval()` | oracle, approved | oracle allowlist |
-
-### Midnight
-
-#### `UnightBidRatifier.isRatified()`
+#### `UnightAccount.onBuy()`
 
 | Aspect | Detail |
-|---|---|
-| Visibility | external view |
-| Caller | Midnight only; `msg.sender` checked |
-| Parameters | offer, ratifier data, taker (protocol-provided) |
-| Call chain | `→ baseRatifier.isRatified()` |
-| State modified | None |
-| Value flow | None |
-| Reentrancy guard | not applicable; view |
+|--------|--------|
+| Visibility | external, internal caller check |
+| Caller | canonical Midnight contract |
+| Parameters | `id` (protocol-derived), `market` (protocol-derived), `buyerAssets` (protocol-derived), `units` (protocol-derived), `pendingFeeIncrease` (protocol-derived), `buyer` (protocol-derived), `data` (user-signed/protocol-derived) |
+| Call chain | `onBuy()` -> `_openBidContext()` if idle -> `V4TerminalPositionAdapter.removeForFunding()` -> `IPositionManager.modifyLiquidities()` -> `_approveExact()` |
+| State modified | `_execution`, `committedBuyerAssets`, `autoLendBuyerAssets` or `bidBoardBuyerAssets`, `v4PrincipalRemoved` |
+| Value flow | loan token from v4 position to account; exact allowance to Midnight |
+| Reentrancy guard | no; caller and context commitments are checked |
 
-## Initialization
+## Admin / Configuration
 
-Constructors initialize the registry, factory, account, and ratifier. The account and ratifier contain immutable cross-references; factory account creation accepts a ratifier address supplied by the caller.
+| Contract | Function | Parameters | State Modified |
+|----------|----------|------------|----------------|
+| `UnightAccount` | `setExecutor()` | `executor`, `enabled` | `isExecutor[executor]` |
+| `UnightAccount` | `setPolicy()` | `newPolicy` | `policy`, `policyNonce` |
+| `UnightAccount` | `disablePolicy()` | none | `policy.enabled`, `policyNonce` |
+| `UnightAccount` | `close()` | none | `closed`, `policy.enabled`, `policyNonce`, `positionEpoch`; may revoke Midnight authorization |
+| `UnightAccount` | `withdrawPosition()` | none | `positionEpoch`; transfers position NFT to owner |
+| `UnightAccount` | `sweepLoanToken()` | `amount`, `recipient` | none; transfers residual loan tokens |
+| `UnightPolicyRegistry` | `setPoolApproval()` | `poolId`, `approved` | `_pools[poolId]` |
+| `UnightPolicyRegistry` | `setMarketApproval()` | `marketId`, `approved` | `_markets[marketId]` |
+| `UnightPolicyRegistry` | `setRatifierApproval()` | `ratifier`, `approved` | `_ratifiers[ratifier]` |
+| `UnightPolicyRegistry` | `setDormancyOracleApproval()` | `oracle`, `approved` | `_oracles[oracle]` |
+| `UnightAccount` | `onERC721Received()` | `tokenId` | none; accepts only configured v4 NFT from PositionManager |
+| `UnightBidRatifier` | `isRatified()` | `offer`, `ratifierData`, `taker` | none; static/read-only ratifier boundary |

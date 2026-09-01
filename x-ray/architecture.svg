@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1116" height="645" viewBox="0 0 447 258" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 8 6" refX="8" refY="3"
+      markerWidth="4" markerHeight="3" orient="auto">
+      <path d="M0.5,0.5 L7,3 L0.5,5.5" fill="none" stroke="#94A3B8"
+        stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+    </marker>
+    <filter id="shadow" x="-6%" y="-8%" width="112%" height="128%">
+      <feDropShadow dx="0" dy="0.5" stdDeviation="0.8"
+        flood-color="#000" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+  <rect width="447" height="258" fill="#F8F9FB" rx="3"/>
+  <text x="223" y="11" text-anchor="middle" font-size="6" font-weight="700" fill="#1E293B">Unight Architecture</text>
+  <rect x="148" y="16" width="150" height="10" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="153" y="18.5" width="5" height="5" rx="2.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <text x="161" y="22.5" font-size="3.5" fill="#1E293B">Actor</text>
+  <rect x="193" y="18.5" width="5" height="5" rx="1.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="194" y="19.5" width="0.8" height="3" rx="0.4" fill="#3B82F6"/>
+  <text x="201" y="22.5" font-size="3.5" fill="#1E293B">Protocol</text>
+  <rect x="241" y="18.5" width="5" height="5" rx="1.5" fill="#fff" stroke="#E2E5EA" stroke-width="0.4"/>
+  <rect x="242" y="19.5" width="0.8" height="3" rx="0.4" fill="#F59E0B"/>
+  <text x="249" y="22.5" font-size="3.5" fill="#1E293B">External</text>
+  <rect x="20.0" y="84.0" width="406.6" height="40.0" rx="5" fill="#EDEEF2"/>
+  <text x="423.6" y="89.0" text-anchor="end" font-size="3.5" fill="#94A3B8" font-weight="500">Governance &amp; Deployment</text>
+  <rect x="20.0" y="146.0" width="406.6" height="40.0" rx="5" fill="#EDEEF2"/>
+  <text x="423.6" y="151.0" text-anchor="end" font-size="3.5" fill="#94A3B8" font-weight="500">Account Layer</text>
+  <rect x="20.0" y="208.0" width="406.6" height="40.0" rx="5" fill="#EDEEF2"/>
+  <text x="423.6" y="213.0" text-anchor="end" font-size="3.5" fill="#94A3B8" font-weight="500">External Protocols</text>
+  <path d="M87.2,46.0 C87.2,70.0 76.0,70.0 76.0,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M87.2,46.0 C87.2,70.0 190.0,70.0 190.0,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M171.8,46.0 Q132.0,104.0 164.8,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M164.8,94.0 Q136.0,104.0 157.7,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M252.8,46.0 C252.8,70.0 260.9,70.0 260.9,94.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M260.9,94.0 C260.9,125.0 269.0,125.0 269.0,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M190.0,114.0 C190.0,135.0 157.7,135.0 157.7,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M76.0,114.0 C76.0,135.0 157.7,135.0 157.7,156.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M230.2,174.0 C221.5,196.0 210.0,196.0 201.3,176.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M157.7,176.0 C157.7,197.0 386.6,197.0 386.6,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M157.7,176.0 C157.7,197.0 96.6,197.0 96.6,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M157.7,176.0 C157.7,197.0 198.6,197.0 198.6,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M157.7,176.0 C157.7,197.0 300.6,197.0 300.6,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <path d="M269.0,176.0 C269.0,197.0 386.6,197.0 386.6,218.0" fill="none" stroke="#94A3B8" stroke-width="0.5" marker-end="url(#ah)"/>
+  <g filter="url(#shadow)">
+    <rect x="53.8" y="32.0" width="66.8" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="87.2" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">LP Owner</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="142.6" y="32.0" width="58.4" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="171.8" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Executor</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="223.0" y="32.0" width="59.6" height="14" rx="7" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <text x="252.8" y="40.8" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Borrower</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="30.0" y="94.0" width="92.0" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="33.0" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="76.0" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Policy Registry</text>
+    <text x="76.0" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">Allowlists</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="144.0" y="94.0" width="92.0" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="147.0" y="97.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="190.0" y="103.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Account Factory</text>
+    <text x="190.0" y="108.5" text-anchor="middle" font-size="3.5" fill="#64748B">CREATE2</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="114.1" y="156.0" width="87.2" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="117.1" y="159.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="157.7" y="165.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Unight Account</text>
+    <text x="157.7" y="170.5" text-anchor="middle" font-size="3.5" fill="#64748B">Custody + policy</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="230.2" y="156.0" width="77.6" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="233.2" y="159.0" width="1.4" height="14" rx="0.6" fill="#3B82F6"/>
+    <text x="269.0" y="165.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Bid Ratifier</text>
+    <text x="269.0" y="170.5" text-anchor="middle" font-size="3.5" fill="#64748B">Read-only gate</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="356.6" y="218.0" width="60.0" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="359.6" y="221.0" width="1.4" height="14" rx="0.6" fill="#F59E0B"/>
+    <text x="386.6" y="227.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Midnight</text>
+    <text x="386.6" y="232.5" text-anchor="middle" font-size="3.5" fill="#64748B">Lending</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="62.6" y="218.0" width="68.0" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="65.6" y="221.0" width="1.4" height="14" rx="0.6" fill="#F59E0B"/>
+    <text x="96.6" y="227.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Uniswap v4</text>
+    <text x="96.6" y="232.5" text-anchor="middle" font-size="3.5" fill="#64748B">NFT + pool</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="152.6" y="218.0" width="92.0" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="155.6" y="221.0" width="1.4" height="14" rx="0.6" fill="#F59E0B"/>
+    <text x="198.6" y="227.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Dormancy Oracle</text>
+    <text x="198.6" y="232.5" text-anchor="middle" font-size="3.5" fill="#64748B">Terminal dwell</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="266.6" y="218.0" width="68.0" height="20" rx="3" fill="#fff" stroke="#E2E5EA" stroke-width="0.5"/>
+    <rect x="269.6" y="221.0" width="1.4" height="14" rx="0.6" fill="#F59E0B"/>
+    <text x="300.6" y="227.5" text-anchor="middle" font-size="4.8" font-weight="600" fill="#1E293B">Loan Token</text>
+    <text x="300.6" y="232.5" text-anchor="middle" font-size="3.5" fill="#64748B">ERC20</text>
+  </g>
+  <rect x="66.4" y="65.0" width="30.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="81.6" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">approve ids</text>
+  <rect x="119.8" y="65.0" width="37.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="138.6" y="70.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">create account</text>
+  <rect x="128.2" y="119.0" width="25.6" height="6.0" rx="1" fill="#EDEEF2"/>
+  <text x="141.0" y="124.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">auto lend</text>
+  <rect x="252.1" y="120.0" width="25.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="264.9" y="125.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">maker bid</text>
+  <rect x="155.1" y="130.0" width="37.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="173.9" y="135.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">deploy account</text>
+  <rect x="99.3" y="130.0" width="35.2" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="116.9" y="135.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">policy checks</text>
+  <rect x="199.4" y="195.0" width="32.8" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="215.8" y="200.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">register bid</text>
+  <rect x="255.8" y="192.0" width="32.8" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="272.2" y="197.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">settle offer</text>
+  <rect x="113.2" y="192.0" width="28.0" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="127.2" y="197.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">remove liq</text>
+  <rect x="163.0" y="192.0" width="30.4" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="178.2" y="197.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">prove dwell</text>
+  <rect x="211.6" y="188.0" width="35.2" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="229.2" y="193.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">approve funds</text>
+  <rect x="315.0" y="192.0" width="25.6" height="6.0" rx="1" fill="#F8F9FB"/>
+  <text x="327.8" y="197.0" font-size="4" fill="#1E293B" font-weight="500" text-anchor="middle">base auth</text>
+</svg>

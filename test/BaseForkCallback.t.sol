@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {UnightAccount} from "../src/UnightAccount.sol";
 import {IMidnight} from "../src/interfaces/IMidnight.sol";
+import {UnightPolicy} from "../src/libraries/UnightTypes.sol";
 import {BaseForkHarness} from "./BaseForkHarness.sol";
 
 /// @notice Fork tests for authenticated Midnight callback validation and funding.
@@ -11,6 +12,20 @@ import {BaseForkHarness} from "./BaseForkHarness.sol";
 contract BaseForkCallbackTest is BaseForkHarness {
     uint256 internal constant BUYER_ASSETS = 100e6;
     uint256 internal constant MIN_UNITS = 101e6;
+
+    /// @notice Applies the lendable policy used by the callback fixtures.
+    /// @dev The fixture position's terminal principal (~4,440 USDC) is far
+    ///      smaller than the shared default 100k USDC reactivation reserve, so
+    ///      the baseline policy leaves no bid capacity; these tests reduce the
+    ///      reserve so contexts can register under correct capacity semantics.
+    function setUp() public override {
+        super.setUp();
+        UnightPolicy memory policy = defaultPolicy();
+        policy.reactivationReserve = 0;
+        policy.expiry = block.timestamp + 2 days;
+        vm.prank(LP_OWNER);
+        account.setPolicy(policy);
+    }
 
     /// @notice Registers a maker-bid callback context for the current policy.
     /// @param maxAssets Maximum gross buyer assets accepted by the context.

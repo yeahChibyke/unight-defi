@@ -46,8 +46,9 @@ contract BaseForkTest is Test {
     UnightAccount internal account;
 
     /// @notice Creates a fresh Unight account around the live fork position.
-    /// @dev The LP owner is impersonated only to transfer the PositionManager
-    ///      NFT into the newly deployed account and install the test policy.
+    /// @dev The LP owner is impersonated to deploy the account for the owned
+    ///      position, transfer the PositionManager NFT into it, and install
+    ///      the test policy.
     function setUp() public {
         vm.createSelectFork(vm.envString("BASE_RPC_URL"), FORK_BLOCK);
 
@@ -59,6 +60,7 @@ contract BaseForkTest is Test {
         registry.setDormancyOracleApproval(address(dormancyOracle), true);
 
         factory = new UnightAccountFactory(positionManager, IPoolManager(POOL_MANAGER), midnight, registry);
+        vm.prank(LP_OWNER);
         factory.createAccount(LP_OWNER, POSITION_ID, USDC, POOL_ID, dormancyOracle, address(this));
         account = UnightAccount(factory.accountOf(LP_OWNER, POSITION_ID));
 
@@ -157,6 +159,11 @@ contract BaseForkTest is Test {
     ///      {UnightAccount.onBuy} as the live Midnight address; it does not run
     ///      a complete signed {IMidnight.take} settlement.
     function testCallbackRemovesOnlyRequestedTerminalLiquidity() public {
+        UnightPolicy memory policy = _defaultPolicy();
+        policy.reactivationReserve = 0;
+        policy.expiry = block.timestamp + 2 days;
+        vm.prank(LP_OWNER);
+        account.setPolicy(policy);
         _setPoolTick(TARGET_TERMINAL_TICK);
 
         IMidnight.Market memory market = midnight.toMarket(MARKET_ID);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {IDormancyOracle} from "./interfaces/IDormancyOracle.sol";
@@ -26,6 +27,7 @@ contract UnightAccountFactory {
     mapping(address owner => mapping(uint256 positionId => address account)) public accountOf;
 
     error AccountExists();
+    error NotPositionOwner();
 
     event AccountCreated(address indexed owner, uint256 indexed positionId, address indexed account);
 
@@ -51,8 +53,11 @@ contract UnightAccountFactory {
     }
 
     /// @notice Deploys a deterministic account for one LP position.
-    /// @dev Anyone may submit the deployment, but the supplied owner becomes the
-    ///      immutable account owner. The same owner-position pair cannot repeat.
+    /// @dev Only the current owner of the position NFT may submit the
+    ///      deployment. The caller supplies the account owner, which is
+    ///      typically themselves but need not be. Requiring NFT ownership at
+    ///      creation time prevents a third party from registering another LP's
+    ///      owner-position slot to grief their account.
     /// @param owner_ LP that will own the new account.
     /// @param positionId Uniswap v4 position NFT assigned to the account.
     /// @param loanToken Token used to fund Midnight settlements.
@@ -68,6 +73,9 @@ contract UnightAccountFactory {
         IDormancyOracle dormancyOracle,
         address bidRatifier
     ) external returns (address account) {
+        if (IERC721(address(positionManager)).ownerOf(positionId) != msg.sender) {
+            revert NotPositionOwner();
+        }
         if (accountOf[owner_][positionId] != address(0)) revert AccountExists();
         bytes32 salt = keccak256(abi.encode(owner_, positionId, expectedPoolId, loanToken));
         account = address(

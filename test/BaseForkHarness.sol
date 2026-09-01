@@ -65,6 +65,7 @@ abstract contract BaseForkHarness is Test {
         registry.setDormancyOracleApproval(address(dormancyOracle), true);
 
         factory = new UnightAccountFactory(positionManager, poolManager, midnight, registry);
+        vm.prank(LP_OWNER);
         factory.createAccount(LP_OWNER, POSITION_ID, USDC, POOL_ID, dormancyOracle, address(this));
         account = UnightAccount(factory.accountOf(LP_OWNER, POSITION_ID));
 
