@@ -18,12 +18,12 @@ Unight gives Uniswap LPs two ways to deploy dormant terminal inventory into Morp
 | Funding model | Just-in-time through a Midnight buy callback |
 | User modes | Auto-Lend and LP Bid Board |
 | Settlement | Atomic, on the same chain, through Midnight |
-| Position authority | A policy-controlled Unight account owns or can modify the LP position |
+| Position authority | A policy-controlled Unight Account custodies the transferred position NFT and can modify the LP position within policy |
 | Initial scope | Approved v4 pools and Midnight markets on Base; no in-callback swaps |
 
 ## Why Unight exists
 
-When the pool price moves fully beyond a concentrated-liquidity position's range, the position's **liquidity principal becomes single-sided**: its principal is represented entirely by one of the two pool tokens, subject only to integer rounding. The position stops accruing new ordinary swap fees until the price re-enters the range, but the LP may still want to preserve the range because it could become useful again. Previously accrued fees are accounted for separately and may remain claimable in either token, so **"100% USDC" in this README refers to the withdrawable liquidity principal, not necessarily every token claim associated with the position**.
+When the pool price moves fully beyond a concentrated-liquidity position's range, the position's **liquidity principal becomes single-sided**: its principal is represented entirely by one of the two pool tokens, subject only to integer rounding. The position stops accruing new ordinary swap fees until the price re-enters the range, but the LP may still want to preserve the range because it could become useful again. Previously accrued fees are accounted for separately and may remain claimable in either token, so **"100% USDC" in this document refers to the withdrawable liquidity principal, not necessarily every token claim associated with the position**.
 
 Without Unight, the LP normally chooses between:
 
@@ -41,13 +41,13 @@ The inventory follows whichever valid path consumes it first:
 
 Unight is not free double yield. A successful lending fill converts part of the LP's immediately available AMM inventory into credit that remains exposed until it is sold, repaid, withdrawn as available liquidity, or otherwise resolved. Reaching maturity does not itself guarantee immediate cash repayment.
 
-## The terms used in this README
+## The terms used in this document
 
 ### Terminal inventory
 
 The single token represented by the liquidity principal of a fully out-of-range position. For Unight v1, that token must be the loan token of an approved Midnight market, initially USDC.
 
-For the Base WETH/USDC example used in this README, if WETH's price—quoted as USDC per WETH—is safely above the position's upper price bound, the liquidity principal is entirely USDC. If WETH's price is safely below the lower bound, the principal is entirely WETH. Unight v1 only treats the USDC-side state as eligible. Accrued fees and incidental dust are excluded from the lendable-principal calculation.
+For the Base WETH/USDC example used in this document, if WETH's price—quoted as USDC per WETH—is safely above the position's upper price bound, the liquidity principal is entirely USDC. If WETH's price is safely below the lower bound, the principal is entirely WETH. Unight v1 only treats the USDC-side state as eligible. Accrued fees and incidental dust are excluded from the lendable-principal calculation.
 
 The contracts must derive the terminal asset from the pool's canonical currency ordering and tick math; they must not infer it from the human-readable `WETH/USDC` label, which interfaces may display in either price orientation.
 
@@ -121,9 +121,9 @@ Unight is a product composed of contracts and offchain services. It is not only 
 | **Auto-Lend monitor and executor** | Watches supported borrower asks, computes the LP's net rate, simulates execution, and submits a transaction when all stored conditions are satisfied. |
 | **LP Bid Board** | Distributes and displays callback-backed Midnight buy offers that Morpho's hosted router does not currently index. |
 | **Live capacity service** | Reports how much of an offer is currently executable after accounting for the position, the LP's policy, prior fills, and market state. |
-| **Optional UnightGuardHook** | For Unight-native v4 pools, records time-weighted pool observations that help verify that a position is safely dormant rather than briefly manipulated out of range. |
+| **Proposed `UnightGuardHook`** | Not implemented in this repository. For future Unight-native v4 pools, it could record time-weighted pool observations that help verify that a position is safely dormant rather than briefly manipulated out of range. |
 
-In the recommended account model, the LP remains the Midnight lender and receives the credit position directly. The LP authorizes only their personal Unight Account to act on their behalf in Midnight. Offchain monitors and keepers can call the account, but they receive no direct authority over the LP's Midnight position or Uniswap NFT.
+In the recommended account model, the LP remains the Midnight lender and receives the credit position directly. The LP transfers the position NFT to their personal Unight Account and authorizes only that account to act on their behalf in Midnight. Offchain monitors and keepers can call the account, but they receive no direct authority over the LP's Midnight position or the custodied Uniswap NFT.
 
 ## The current Midnight routing limitation
 
@@ -404,27 +404,9 @@ In Auto-Lend mode, another lender may consume an attractive borrower ask first. 
 
 The core Unight settlement path is a Midnight callback plus authority over a v4 position. A v4 hook is not required to call Midnight.
 
-For a v4-native UHI implementation, `UnightGuardHook` can provide a real protocol function: record time-weighted tick and volatility observations for Unight-enabled pools and expose a conservative dormancy check. The Unight Account can use that signal to reject positions that were moved outside range only briefly or manipulatively.
+For a future v4-native implementation, the proposed `UnightGuardHook` could provide a real protocol function: record time-weighted tick and volatility observations for Unight-enabled pools and expose a conservative dormancy check. The Unight Account could use that signal to reject positions that were moved outside range only briefly or manipulatively.
 
-The hook does not hold Midnight credit and does not replace the Unight Account. It strengthens the evidence that inventory is safely dormant. Existing v4 pools cannot attach a new hook after creation, so production integrations with existing pools may instead use reviewed hookless pools and external reference checks.
-
-## Unight v1 scope
-
-Unight v1 should remain deliberately narrow:
-
-- Base only, so Uniswap withdrawal and Midnight settlement occur atomically on one chain;
-- Uniswap v4 positions only;
-- USDC as the first loan token;
-- fully out-of-range, single-sided principal only;
-- lending or buy-side Midnight exposure only;
-- approved Midnight market IDs and fixed maturities;
-- approved hookless v4 pools, or specifically reviewed hooks;
-- Auto-Lend and LP Bid Board using one shared position budget;
-- no in-callback swaps;
-- no leverage, cross-chain inventory, arbitrary AMMs, or automatic market selection;
-- no promise that every signed offer will fill.
-
-Uniswap v3 and other AMMs can be considered later through explicit position adapters. They are not part of the initial design.
+The proposed hook would not hold Midnight credit and would not replace the Unight Account. It would strengthen the evidence that inventory is safely dormant. Existing v4 pools cannot attach a new hook after creation, so production integrations with existing pools may instead use reviewed hookless pools and external reference checks.
 
 ## Who Unight is for
 
@@ -436,15 +418,6 @@ Unight is best suited to:
 - LPs who deliberately place one-sided ranges and want a fixed-rate lending option while waiting.
 
 It is less suitable for very small positions, positions close to immediate re-entry, unsupported terminal tokens, or users who do not want fixed-maturity credit exposure.
-
-## What Unight is not
-
-- **Not a new lending protocol:** Midnight remains the lending and settlement protocol.
-- **Not a separate borrower-risk engine:** Midnight enforces market and borrower rules.
-- **Not a pre-funded Midnight order book:** the loan token stays in Uniswap until settlement is attempted, even if the position NFT is held by a policy-controlled Unight Account.
-- **Not guaranteed double yield:** a fill exchanges AMM re-entry capacity for lending exposure.
-- **Not a guarantee of execution:** offers and asks may expire, be consumed, become uneconomic, or fail current policy checks.
-- **Not a generic AMM aggregator in v1:** Uniswap v4 is the initial and deliberate focus.
 
 ## Product summary
 

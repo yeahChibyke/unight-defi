@@ -4,7 +4,7 @@ Conditional fixed-rate lending for dormant Uniswap v4 liquidity.
 
 Unight lets a Uniswap LP keep a concentrated-liquidity position in place while making a bounded amount of its single-sided, out-of-range principal available for fixed-maturity lending through Morpho Midnight.
 
-The LP keeps the position NFT and chooses the policy: approved market, maturity window, minimum rate, capacity, and the amount of liquidity that may be removed. When a valid Midnight trade arrives, Unight removes only the required terminal principal and funds the settlement atomically.
+The LP chooses the policy: approved market, maturity window, minimum rate, capacity, and the amount of liquidity that may be removed. After the LP transfers the position NFT into its dedicated Unight Account, that account holds it while the policy is active and can return it after closure and settlement exit conditions are satisfied. When a valid Midnight trade arrives, Unight removes only the required terminal principal and funds the settlement atomically.
 
 > **Status:** Development prototype. The contracts are not audited and are not ready for production use. Do not deposit funds or use fork deployment addresses as production configuration.
 
@@ -60,7 +60,7 @@ Capacity is denominated in gross Midnight `buyerAssets`, the amount funded by th
 
 | Component | Purpose |
 |---|---|
-| `UnightAccount` | One non-upgradeable account per LP position; owns the NFT, enforces limits, and implements the Midnight callback. |
+| `UnightAccount` | One non-upgradeable account per LP position; custodies the transferred NFT, enforces limits, and implements the Midnight callback. |
 | `UnightAccountFactory` | Deterministically deploys and binds an account to an LP, position, and protocol configuration. |
 | `V4TerminalPositionAdapter` | Proves terminality, calculates conservative liquidity removal, and withdraws exact principal. |
 | `UnightPolicyRegistry` | Governance allowlist for pools, markets, ratifiers, and dormancy oracles. |
@@ -100,5 +100,4 @@ medusa fuzz --config medusa.json
 echidna . --contract ToolFuzzTester --config echidna.yaml
 ```
 
-See [`DEMO.md`](DEMO.md) for the complete test walkthrough, [`params.md`](params.md) for pinned parameters, and [`UNIGHT.md`](UNIGHT.md) plus [`STRATEGY.md`](STRATEGY.md) for the detailed product and implementation rationale.
-
+See [`DEMO.md`](DEMO.md) for the complete test walkthrough, [`params.md`](params.md) for pinned parameters, and [`UNIGHT.md`](UNIGHT.md) for the detailed product and implementation rationale.
